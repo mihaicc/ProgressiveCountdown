@@ -18,7 +18,7 @@ import java.util.TimerTask;
 
 public class ProgressiveCountdown extends AppCompatActivity {
 
-    static Integer SECONDS_IN_A_MIN = 1;
+    static Integer SECONDS_IN_A_MIN = 60;
     TextView timeRem;
     Handler handler;
     Handler mainHandler;
