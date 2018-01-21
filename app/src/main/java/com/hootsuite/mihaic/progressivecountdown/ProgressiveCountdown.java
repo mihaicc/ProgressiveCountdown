@@ -6,18 +6,14 @@ import android.os.Handler;
 import android.os.Message;
 import android.widget.Button;
 import android.view.View;
-import android.net.Uri;
-import android.media.RingtoneManager;
-import android.media.Ringtone;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.os.SystemClock;
 import android.text.format.DateUtils;
-
-import java.math.BigDecimal;
+import android.speech.tts.TextToSpeech;
 import java.util.LinkedList;
 import java.util.Timer;
+import java.util.Locale;
 import java.util.TimerTask;
 
 public class ProgressiveCountdown extends AppCompatActivity {
@@ -30,11 +26,28 @@ public class ProgressiveCountdown extends AppCompatActivity {
     Runnable r;
     Long startTime, endTime;
     LinkedList alerts;
-
+    TextToSpeech tts;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_progressive_countdown);
+        tts=new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+
+            @Override
+            public void onInit(int status) {
+                // TODO Auto-generated method stub
+                if(status == TextToSpeech.SUCCESS){
+                    int result=tts.setLanguage(Locale.US);
+                    if(result==TextToSpeech.LANG_MISSING_DATA ||
+                            result==TextToSpeech.LANG_NOT_SUPPORTED){
+                        Log.e("error", "This Language is not supported");
+                    }
+                }
+                else
+                    Log.e("error", "Initilization Failed!");
+            }
+        });
+        tts.setLanguage(Locale.US);
         handler = new Handler(callback);
         timeRem = (TextView) findViewById(R.id.timeRemaining);
         final Button button = findViewById(R.id.btn_start);
@@ -54,9 +67,6 @@ public class ProgressiveCountdown extends AppCompatActivity {
                 if (endTime >= now+1) {
                     handler.postDelayed(r, 1000);
                 }
-
-                //EditText rem = (EditText)findViewById(R.id.edt_Remaining);
-                //rem.setText(String.valueOf(startMinutes * 60));
             }
 
             public Long now(){
@@ -87,8 +97,6 @@ public class ProgressiveCountdown extends AppCompatActivity {
         });
     }
 
-
-
     public Handler.Callback callback = new Handler.Callback() {
         public boolean handleMessage(Message msg) {
             Long timeLeft = msg.getData().getLong("msg");
@@ -97,17 +105,20 @@ public class ProgressiveCountdown extends AppCompatActivity {
             return true;
         }
         public void sendNotificationIfNeeded(Long timeLeft){
+            if (alerts.isEmpty() || !(timeLeft>0)){
+                return;
+            }
             Float alertThreshold = (Float)alerts.peek();
             Long totalTime = endTime-startTime;
-            if (totalTime>0 && (timeLeft.floatValue()/totalTime)*100 < alertThreshold) {
+            if (timeLeft.floatValue()/totalTime*100 < alertThreshold) {
                 alerts.pop();
-                try {
-                    Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                    Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
-                    r.play();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                String timeForNotif;
+                if (timeLeft > 60){
+                    timeForNotif = timeLeft/60 + " min";
+                } else {
+                    timeForNotif = timeLeft + " sec";
                 }
+                tts.speak(timeForNotif, TextToSpeech.QUEUE_ADD, null, "1234");
             }
         }
     };
